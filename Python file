@@ -1,0 +1,230 @@
+import pygame, sys, random, time, os
+from pygame.locals import *
+pygame.init()
+os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (66, 100)
+canvas = pygame.display.set_mode((1200, 500))
+canvas.fill((255, 255, 255))
+pygame.display.set_caption("原力觉醒")
+bg = pygame.image.load("images/bg.png")
+m1 = pygame.image.load("images/enemy1.png")
+m2 = pygame.image.load("images/enemy2.png")
+m3 = pygame.image.load("images/enemy3.png")
+h1 = pygame.image.load("images/hero01.png")
+h2 = pygame.image.load("images/hero02.png")
+h3 = pygame.image.load("images/hero03.png")
+lose_img =pygame.image.load("images/lose.png")
+win_img =pygame.image.load("images/win.png")
+dis = pygame.image.load("images/distance.png")
+earth =pygame.image.load("images/earth.png")
+power = pygame.image.load("images/power.png")
+	
+class Universe():
+	def __init__(self):
+		self.width = 4016
+		self.height = 600
+		self.img = bg
+		self.x1 = 0
+		self.y1 = 0
+		self.x2 = self.width
+		self.y2 = 0
+	def paint(self):
+		canvas.blit(self.img,(self.x1,self.y1))
+		canvas.blit(self.img,(self.x2,self.y2))
+	def move(self):
+		self.x1 = self.x1 - 1
+		self.x2 = self.x2 - 1
+		if self.x1 < -self.width:
+			self.x1 = self.width
+		if self.x2 < -self.width:
+			self.x2 = self.width  
+			
+class Meteor():
+	def __init__(self, x, y, width, height,life,img,type,speed):
+		self.x = x
+		self.y = y
+		self.width = width
+		self.height = height
+		self.life = life
+		self.img = img
+		self.type = type
+		self.speed = speed
+	def paint(self):
+		canvas.blit(self.img, (self.x, self.y))
+	def move(self):
+		self.x = self.x - self.speed
+	def out(self):
+		return self.x < 0
+	
+class Hero():
+	def __init__(self, x, y, width, height, life,img):
+		self.x = x
+		self.y = y
+		self.width = width
+		self.height = height
+		self.life = life
+		self.img = img
+		self.n=1
+		self.m=1
+	def paint(self):
+		if self.n%3==0:
+			canvas.blit(h1, (self.x, self.y))
+		elif self.n%3==1:
+			canvas.blit(h2, (self.x, self.y))
+		else:
+			canvas.blit(h3, (self.x, self.y))
+		self.m=self.m+1
+		if self.m%2==0:
+			self.n=self.n+1
+	def hit(self, c):
+		return c.x + c.width > self.x+70 and c.x < self.x + self.width and \
+			   c.y > self.y - c.height and c.y < self.y + self.height	  
+			 
+def draw(i=None,j=None):
+	global meteors,lastTime,interval,timeN,d,state
+	y1 = random.randint(0, 500 - 57)
+	y2 = random.randint(0, 500 - 50)
+	y3 = random.randint(0, 500 - 100)
+	speed1 = random.randint(7, 11)
+	speed2 = random.randint(5, 7)
+	speed3 = random.randint(3, 4)
+	n = random.randint(0, 8)
+	if isActionTime(lastTime,interval):
+		if n <= 4:
+			meteors.append(Meteor(1200, y1, 44, 45, 1, m1,1, speed1))
+		elif n <= 7:
+			meteors.append(Meteor(1200, y2, 89, 80, 2, m2,1, speed2))
+		elif n == 8: 
+			meteors.append(Meteor(1200, y3, 139, 100, 3, m3,1, speed3)) 
+		lastTime = time.time()
+				
+	if i==1 or j==1:
+		universe.paint()
+		canvas.blit(earth,(1050,300))
+		canvas.blit(dis,(10,10))
+		canvas.blit(power,(1030,10))
+		fillText(str(d), (82, 21))
+		fillText(str(e), (1090, 23))
+		if timeN % 10 == 0:
+			d=d-1
+		timeN=timeN+1   
+		for m in meteors:
+			m.paint() 
+	if i==2 or j==2:
+		if state=='RUNNING':
+			mecha.paint()
+	
+		  
+	
+def move(i=None,j=None):  
+	global hmove,state
+	if i==1 or j==1 :  
+		universe.move()
+		for m in meteors:
+			m.move() 
+	if i==2 or j==2 :
+		if state=='RUNNING':
+			hmove=True			   
+	delete()
+
+def delete():
+	global e
+	if state=='RUNNING':
+		for m in meteors:
+			if m.out():
+				meteors.remove(m)
+			elif mecha.hit(m):
+				meteors.remove(m)
+				e=e-1
+				Hero(0, 0, 199, 62, 1,h1)
+
+def win():
+	global state
+	universe.paint()
+	state='OVER'
+	canvas.blit(earth,(1050,300))
+	canvas.blit(win_img,(110,-50))
+
+def lose():
+	global state 
+	universe.paint()
+	state='OVER'
+	canvas.blit(earth,(1050,300))
+	canvas.blit(lose_img,(110,-50))
+
+def isActionTime(lastTime, interval):
+	if lastTime == 0:
+		return True
+	currentTime = time.time()
+	return currentTime - lastTime >= interval
+
+def fillText(text, position):
+	TextFont = pygame.font.Font("images/my_font/font1.ttf", 25)
+	newText = TextFont.render(text, True, (255, 255, 255))
+	canvas.blit(newText, position)
+
+class Score():
+	def getScore(self):
+		with open('tools/score.txt', 'r') as f:
+			textImage = f.read()
+			return   textImage	
+		  
+def handleEvent():
+	global hmove
+	for event in pygame.event.get():
+		if event.type == pygame.QUIT:
+			pygame.quit()
+			sys.exit()
+		if event.type == MOUSEMOTION and hmove==True:
+			mecha.x = event.pos[0] - mecha.width / 2
+			mecha.y = event.pos[1] - mecha.height / 2
+
+def over():
+	if d<0:
+		win()
+	if e<1:
+		lose()
+
+universe=Universe()
+uv=1
+hero=2
+hmove=False
+meteors=[] 
+lastTime=0
+state='RUNNING'
+mecha = Hero(0, 200, 232, 62, 1,h1)
+timeN=0
+result = int(Score().getScore())
+
+#陨石间隔
+interval=0.5
+e=result
+d=100
+while True:
+	draw(uv)
+	draw(hero)
+	move(uv,hero)
+	if d<0:
+		win()
+	if e<1:
+		lose()
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	handleEvent()
+	pygame.display.update()
+	pygame.time.delay(15)
